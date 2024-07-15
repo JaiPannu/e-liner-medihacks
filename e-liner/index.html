@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>e-liner - Home</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Welcome to e-liner</h1>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#progress">Progress</a></li>
+                <li><a href="#activities">Activities</a></li>
+                <li><a href="#audio-exercises">Audio Exercises</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main class="container">
+        <section id="home">
+            <h2>Introduction</h2>
+            <p class="introduction">Welcome to e-liner, a platform designed to help dyslexic learners through multisensory and structured methods.</p>
+            <a class="button" href="#activities">Start Activities</a>
+        </section>
+        
+        <section id="progress">
+            <h2>Progress</h2>
+            <form id="progress-form" onsubmit="addProgress(event)">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="progress">Progress:</label>
+                    <textarea id="progress" name="progress" required></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="button">Submit Progress</button>
+                </div>
+            </form>
+            <div class="progress-table-container">
+                <table id="progress-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Progress entries will be added here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="activities">
+            <h2>Activities</h2>
+            <p>Activities for dyslexic learners to practice breaking down words, identifying sounds, and more.</p>
+            <div>
+                <h3>Break Down Words</h3>
+                <input type="text" id="syllable-word" placeholder="Enter a word to break down">
+                <button class="button" onclick="breakDownWord()">Break Down</button>
+                <div id="syllable-results"></div>
+            </div>
+            <div>
+                <h3>Identify Sounds</h3>
+                <input type="text" id="sound-word" placeholder="Enter a word to identify sounds">
+                <button class="button" onclick="identifySounds()">Identify Sounds</button>
+                <div id="sound-results"></div>
+            </div>
+        </section>
+
+        <section id="audio-exercises">
+            <h2>Audio Exercises</h2>
+            <div class="audio-exercise-container">
+                <label for="audio-word">Enter a word to check for prefixes and suffixes:</label>
+                <input type="text" id="audio-word" name="audio-word">
+                <button class="button" onclick="searchPrefixSuffix()">Search</button>
+            </div>
+            <div id="audio-results"></div>
+        </section>
+    </main>
+    <footer class="footer">
+        <p>&copy; 2024 e-liner. All rights reserved.</p>
+    </footer>
+    <script>
+        async function fetchPrefixSuffixData() {
+            const response = await fetch('prefix_suffix.csv');
+            const data = await response.text();
+            return data.split('\n').slice(1).map(line => {
+                const [type, value, audio_path] = line.split(',');
+                return { type, value, audio_path };
+            });
+        }
+
+        async function searchPrefixSuffix() {
+            const word = document.getElementById('audio-word').value.trim();
+            if (!word) return;
+            const data = await fetchPrefixSuffixData();
+            const results = [];
+
+            for (const item of data) {
+                if (item.type === 'prefix' && word.startsWith(item.value)) {
+                    results.push(item);
+                }
+            }
+
+            for (const item of data) {
+                if (item.type === 'suffix' && word.endsWith(item.value)) {
+                    results.push(item);
+                }
+            }
+
+            displayResults(results);
+        }
+
+        function displayResults(results) {
+            const resultsContainer = document.getElementById('audio-results');
+            resultsContainer.innerHTML = '';
+
+            if (results.length === 0) {
+                resultsContainer.textContent = 'No prefixes or suffixes found.';
+                return;
+            }
+
+            results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = 'audio-item';
+                div.textContent = `${result.type.toUpperCase()}: ${result.value}`;
+                
+                const button = document.createElement('button');
+                button.className = 'button';
+                button.textContent = 'Play Audio';
+                button.onclick = () => {
+                    const audio = new Audio(result.audio_path);
+                    audio.play();
+                };
+
+                div.appendChild(button);
+                resultsContainer.appendChild(div);
+            });
+        }
+
+        function addProgress(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const progress = document.getElementById('progress').value;
+            const table = document.getElementById('progress-table').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+            const nameCell = newRow.insertCell(0);
+            const progressCell = newRow.insertCell(1);
+            nameCell.textContent = name;
+            progressCell.textContent = progress;
+            document.getElementById('progress-form').reset();
+        }
+
+        function breakDownWord() {
+            const word = document.getElementById('syllable-word').value.trim();
+            if (!word) return;
+            const syllables = breakIntoSyllables(word);
+            const resultsContainer = document.getElementById('syllable-results');
+            resultsContainer.innerHTML = '';
+            syllables.forEach(syllable => {
+                const span = document.createElement('span');
+                span.className = 'syllable';
+                span.textContent = syllable;
+                resultsContainer.appendChild(span);
+            });
+        }
+
+        function breakIntoSyllables(word) {
+            const vowels = 'aeiouy';
+            const syllables = [];
+            let currentSyllable = '';
+
+            for (let i = 0; i < word.length; i++) {
+                currentSyllable += word[i];
+
+                if (vowels.includes(word[i]) && (i === word.length - 1 || !vowels.includes(word[i + 1]))) {
+                    syllables.push(currentSyllable);
+                    currentSyllable = '';
+                }
+            }
+
+            if (currentSyllable.length > 0) {
+                syllables.push(currentSyllable);
+            }
+
+            return syllables;
+        }
+
+        function identifySounds() {
+            const word = document.getElementById('sound-word').value.trim();
+            if (!word) return;
+            const soundMapping = identifySoundMapping(word);
+            const resultsContainer = document.getElementById('sound-results');
+            resultsContainer.innerHTML = '';
+            soundMapping.forEach(sound => {
+                const span = document.createElement('span');
+                span.className = 'sound';
+                span.textContent = sound;
+                resultsContainer.appendChild(span);
+            });
+        }
+
+        function identifySoundMapping(word) {
+            const sounds = [];
+            for (let i = 0; i < word.length; i++) {
+                const sound = getSound(word[i]);
+                sounds.push(sound);
+            }
+            return sounds;
+        }
+
+        function getSound(letter) {
+            const soundMap = {
+                'a': 'æ',
+                'e': 'ɛ',
+                'i': 'ɪ',
+                'o': 'ɒ',
+                'u': 'ʌ',
+                // Add more mappings as needed
+            };
+            return soundMap[letter] || letter;
+        }
+    </script>
+</body>
+</html>
